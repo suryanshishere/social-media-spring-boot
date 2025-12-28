@@ -38,6 +38,8 @@ public class UserResources {
         }
         User savedUser = userDaoService.save(user);
 
+        // Verbosity: Java (Spring) requires more explicit steps to build the URI for
+        // the Location header, whereas in Node.js you often just return the JSON.
         java.net.URI location = org.springframework.web.servlet.support.ServletUriComponentsBuilder
                 .fromCurrentRequest()
                 .path("/{id}")
