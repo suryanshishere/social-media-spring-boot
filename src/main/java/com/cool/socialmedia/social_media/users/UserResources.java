@@ -11,7 +11,12 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
+import org.springframework.validation.annotation.Validated;
+
 @RestController
+@Validated
 public class UserResources {
 
     private final UserDaoService userDaoService;
@@ -31,7 +36,7 @@ public class UserResources {
     }
 
     @PostMapping("/users")
-    public org.springframework.http.ResponseEntity<Object> createUser(@RequestBody User user) {
+    public org.springframework.http.ResponseEntity<Object> createUser(@Valid @RequestBody User user) {
         if (user.getId() != null && userDaoService.findOne(user.getId()) != null) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "User with id " + user.getId() + " already exists");
@@ -54,7 +59,8 @@ public class UserResources {
     }
 
     @DeleteMapping("/users/{id}")
-    public org.springframework.http.ResponseEntity<Object> deleteUser(@PathVariable Integer id) {
+    public org.springframework.http.ResponseEntity<Object> deleteUser(
+            @PathVariable @Positive(message = "ID must be positive") Integer id) {
         User user = userDaoService.findOne(id);
         if (user == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User with id " + id + " not found");
