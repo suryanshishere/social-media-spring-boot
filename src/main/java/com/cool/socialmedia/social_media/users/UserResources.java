@@ -1,7 +1,10 @@
 package com.cool.socialmedia.social_media.users;
 
 import java.util.List;
+import java.util.Locale;
 
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -20,9 +23,11 @@ import org.springframework.validation.annotation.Validated;
 public class UserResources {
 
     private final UserDaoService userDaoService;
+    private final MessageSource messageSource;
 
-    public UserResources(UserDaoService userDaoService) {
+    public UserResources(UserDaoService userDaoService, MessageSource messageSource) {
         this.userDaoService = userDaoService;
+        this.messageSource = messageSource;
     }
 
     @GetMapping("/users/{id}")
@@ -37,14 +42,15 @@ public class UserResources {
 
     @PostMapping("/users")
     public org.springframework.http.ResponseEntity<Object> createUser(@Valid @RequestBody User user) {
+        Locale locale = LocaleContextHolder.getLocale();
+
         if (user.getId() != null && userDaoService.findOne(user.getId()) != null) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "User with id " + user.getId() + " already exists");
+            String errorMessage = messageSource.getMessage("user.already.exists", new Object[] { user.getId() },
+                    locale);
+            throw new ResponseStatusException(HttpStatus.CONFLICT, errorMessage);
         }
         User savedUser = userDaoService.save(user);
 
-        // Verbosity: Java (Spring) requires more explicit steps to build the URI for
-        // the Location header, whereas in Node.js you often just return the JSON.
         java.net.URI location = org.springframework.web.servlet.support.ServletUriComponentsBuilder
                 .fromCurrentRequest()
                 .path("/{id}")
@@ -52,7 +58,7 @@ public class UserResources {
                 .toUri();
 
         java.util.Map<String, Object> response = new java.util.LinkedHashMap<>();
-        response.put("message", "User Created Successfully");
+        response.put("message", messageSource.getMessage("user.created.success", null, locale));
         response.put("data", savedUser);
 
         return org.springframework.http.ResponseEntity.created(location).body(response);
@@ -61,14 +67,17 @@ public class UserResources {
     @DeleteMapping("/users/{id}")
     public org.springframework.http.ResponseEntity<Object> deleteUser(
             @PathVariable @Positive(message = "ID must be positive") Integer id) {
+        Locale locale = LocaleContextHolder.getLocale();
+
         User user = userDaoService.findOne(id);
         if (user == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User with id " + id + " not found");
+            String errorMessage = messageSource.getMessage("user.not.found", new Object[] { id }, locale);
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, errorMessage);
         }
         userDaoService.delete(id);
 
         java.util.Map<String, Object> response = new java.util.LinkedHashMap<>();
-        response.put("message", "User Deleted Successfully");
+        response.put("message", messageSource.getMessage("user.deleted.success", null, locale));
 
         return org.springframework.http.ResponseEntity.status(HttpStatus.OK).body(response);
     }
