@@ -2,6 +2,7 @@ package com.cool.socialmedia.social_media.users;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.stream.Collectors;
 
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.Valid;
@@ -19,34 +21,41 @@ import jakarta.validation.constraints.Positive;
 import org.springframework.validation.annotation.Validated;
 
 /**
- * @deprecated This controller is deprecated. Use versioned endpoints instead:
- *             - V1: /v1/users (basic user data)
- *             - V2: /v2/users (enhanced user data with age calculation)
+ * REST API Version 2 - Enhanced user data with additional fields
  * 
- *             This controller is kept for backward compatibility and maps to
- *             /users
+ * V2 returns UserV2 which includes additional metadata like fullName and age
+ * calculation
  */
 @RestController
 @Validated
-@Deprecated
-public class UserResources {
+@RequestMapping("/v2")
+public class UserResourcesV2 {
 
     private final UserDaoService userDaoService;
     private final MessageSource messageSource;
 
-    public UserResources(UserDaoService userDaoService, MessageSource messageSource) {
+    public UserResourcesV2(UserDaoService userDaoService, MessageSource messageSource) {
         this.userDaoService = userDaoService;
         this.messageSource = messageSource;
     }
 
+    // ==================== URI PATH VERSIONING ====================
+    // Access via: GET /v2/users/{id}
+
     @GetMapping("/users/{id}")
-    public User getUser(@PathVariable Integer id) {
-        return userDaoService.findOne(id);
+    public UserV2 getUser(@PathVariable Integer id) {
+        User user = userDaoService.findOne(id);
+        if (user == null) {
+            return null;
+        }
+        return new UserV2(user);
     }
 
     @GetMapping("/users")
-    public List<User> getAllUsers() {
-        return userDaoService.findAll();
+    public List<UserV2> getAllUsers() {
+        return userDaoService.findAll().stream()
+                .map(UserV2::new)
+                .collect(Collectors.toList());
     }
 
     @PostMapping("/users")
@@ -68,7 +77,8 @@ public class UserResources {
 
         java.util.Map<String, Object> response = new java.util.LinkedHashMap<>();
         response.put("message", messageSource.getMessage("user.created.success", null, locale));
-        response.put("data", savedUser);
+        response.put("data", new UserV2(savedUser));
+        response.put("apiVersion", "v2");
 
         return org.springframework.http.ResponseEntity.created(location).body(response);
     }
@@ -87,8 +97,37 @@ public class UserResources {
 
         java.util.Map<String, Object> response = new java.util.LinkedHashMap<>();
         response.put("message", messageSource.getMessage("user.deleted.success", null, locale));
+        response.put("apiVersion", "v2");
 
         return org.springframework.http.ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
+    // ==================== REQUEST PARAM VERSIONING ====================
+    // Access via: GET /users/param/{id}?version=2
+
+    @GetMapping(value = "/users/param/{id}", params = "version=2")
+    public UserV2 getUserByParam(@PathVariable Integer id) {
+        User user = userDaoService.findOne(id);
+        return user != null ? new UserV2(user) : null;
+    }
+
+    // ==================== HEADER VERSIONING ====================
+    // Access via: GET /users/header/{id} with header X-API-VERSION: 2
+
+    @GetMapping(value = "/users/header/{id}", headers = "X-API-VERSION=2")
+    public UserV2 getUserByHeader(@PathVariable Integer id) {
+        User user = userDaoService.findOne(id);
+        return user != null ? new UserV2(user) : null;
+    }
+
+    // ==================== MEDIA TYPE (CONTENT NEGOTIATION) VERSIONING
+    // ====================
+    // Access via: GET /users/accept/{id} with header Accept:
+    // application/vnd.socialmedia.app-v2+json
+
+    @GetMapping(value = "/users/accept/{id}", produces = "application/vnd.socialmedia.app-v2+json")
+    public UserV2 getUserByMediaType(@PathVariable Integer id) {
+        User user = userDaoService.findOne(id);
+        return user != null ? new UserV2(user) : null;
+    }
 }

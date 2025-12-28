@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.Valid;
@@ -19,25 +20,30 @@ import jakarta.validation.constraints.Positive;
 import org.springframework.validation.annotation.Validated;
 
 /**
- * @deprecated This controller is deprecated. Use versioned endpoints instead:
- *             - V1: /v1/users (basic user data)
- *             - V2: /v2/users (enhanced user data with age calculation)
+ * REST API Version 1 - Basic user data
  * 
- *             This controller is kept for backward compatibility and maps to
- *             /users
+ * Versioning Strategies Demonstrated:
+ * 1. URI Path Versioning: /v1/users (this controller)
+ * 2. Request Parameter: /users?version=1 (see param endpoints)
+ * 3. Header Versioning: X-API-VERSION: 1 (see header endpoints)
+ * 4. Media Type: Accept: application/vnd.socialmedia.app-v1+json (see produces
+ * endpoints)
  */
 @RestController
 @Validated
-@Deprecated
-public class UserResources {
+@RequestMapping("/v1")
+public class UserResourcesV1 {
 
     private final UserDaoService userDaoService;
     private final MessageSource messageSource;
 
-    public UserResources(UserDaoService userDaoService, MessageSource messageSource) {
+    public UserResourcesV1(UserDaoService userDaoService, MessageSource messageSource) {
         this.userDaoService = userDaoService;
         this.messageSource = messageSource;
     }
+
+    // ==================== URI PATH VERSIONING ====================
+    // Access via: GET /v1/users/{id}
 
     @GetMapping("/users/{id}")
     public User getUser(@PathVariable Integer id) {
@@ -91,4 +97,29 @@ public class UserResources {
         return org.springframework.http.ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
+    // ==================== REQUEST PARAM VERSIONING ====================
+    // Access via: GET /users/param/{id}?version=1
+
+    @GetMapping(value = "/users/param/{id}", params = "version=1")
+    public User getUserByParam(@PathVariable Integer id) {
+        return userDaoService.findOne(id);
+    }
+
+    // ==================== HEADER VERSIONING ====================
+    // Access via: GET /users/header/{id} with header X-API-VERSION: 1
+
+    @GetMapping(value = "/users/header/{id}", headers = "X-API-VERSION=1")
+    public User getUserByHeader(@PathVariable Integer id) {
+        return userDaoService.findOne(id);
+    }
+
+    // ==================== MEDIA TYPE (CONTENT NEGOTIATION) VERSIONING
+    // ====================
+    // Access via: GET /users/accept/{id} with header Accept:
+    // application/vnd.socialmedia.app-v1+json
+
+    @GetMapping(value = "/users/accept/{id}", produces = "application/vnd.socialmedia.app-v1+json")
+    public User getUserByMediaType(@PathVariable Integer id) {
+        return userDaoService.findOne(id);
+    }
 }
