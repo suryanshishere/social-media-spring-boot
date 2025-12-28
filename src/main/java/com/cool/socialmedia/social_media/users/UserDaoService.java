@@ -30,4 +30,8 @@ public class UserDaoService {
         return users.stream().filter(user -> user.getId().equals(id)).findFirst().orElse(null);
     }
 
+    public void delete(Integer id) {
+        users.removeIf(user -> user.getId().equals(id));
+    }
+
 }

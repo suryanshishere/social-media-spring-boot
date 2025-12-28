@@ -4,7 +4,7 @@ import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
-
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -51,6 +51,20 @@ public class UserResources {
         response.put("data", savedUser);
 
         return org.springframework.http.ResponseEntity.created(location).body(response);
+    }
+
+    @DeleteMapping("/users/{id}")
+    public org.springframework.http.ResponseEntity<Object> deleteUser(@PathVariable Integer id) {
+        User user = userDaoService.findOne(id);
+        if (user == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User with id " + id + " not found");
+        }
+        userDaoService.delete(id);
+
+        java.util.Map<String, Object> response = new java.util.LinkedHashMap<>();
+        response.put("message", "User Deleted Successfully");
+
+        return org.springframework.http.ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
 }
